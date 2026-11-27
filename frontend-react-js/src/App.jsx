@@ -1,22 +1,26 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
-// const API_URL = import.meta.env.VITE_API_URL;
-const API_URL = 'http://localhost:8000/api/v1/students';
+// Uses the Render backend URL in production (set VITE_API_URL in Render),
+// and falls back to localhost when running locally.
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/students';
+
+const initialFormState = {
+  name: '', roll_no: '', branch: '', year: 1, email: '',
+  marks: { ds: 0, dbms: 0, os: 0, cn: 0, se: 0 }
+};
 
 function App() {
   const [students, setStudents] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '', roll_no: '', branch: '', year: 1, email: '',
-    marks: { ds: 0, dbms: 0, os: 0, cn: 0, se: 0 }
-  });
+  const [formData, setFormData] = useState(initialFormState);
 
   const fetchStudents = async () => {
     try {
       const response = await fetch(API_URL);
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
       const data = await response.json();
-      setStudents(data);
+      setStudents(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching students:", error);
     }
@@ -44,14 +48,15 @@ function App() {
     try {
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId ? `${API_URL}/${editingId}` : API_URL;
-      
-      await fetch(url, {
+
+      const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      
-      setFormData({ name: '', roll_no: '', branch: '', year: 1, email: '', marks: { ds: 0, dbms: 0, os: 0, cn: 0, se: 0 } });
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+
+      setFormData(initialFormState);
       setEditingId(null);
       fetchStudents();
     } catch (error) {
@@ -72,20 +77,20 @@ function App() {
   const handleEdit = (student) => {
     setEditingId(student.id);
     setFormData({
-      name: student.name, roll_no: student.roll_no, branch: student.branch, 
+      name: student.name, roll_no: student.roll_no, branch: student.branch,
       year: student.year, email: student.email,
       marks: student.marks || { ds: 0, dbms: 0, os: 0, cn: 0, se: 0 }
     });
   };
 
-    return (
+  return (
     <div className="container">
       <h1>✨ Student Record System</h1>
-      
+
       <div className="card">
         <h2>{editingId ? "Edit Student" : "Add New Student"}</h2>
         <form onSubmit={handleSubmit}>
-          
+
           <div className="form-grid">
             <div className="form-group"><label>Name:</label><input type="text" name="name" value={formData.name} onChange={handleInputChange} required /></div>
             <div className="form-group"><label>Roll No:</label><input type="text" name="roll_no" value={formData.roll_no} onChange={handleInputChange} required /></div>
